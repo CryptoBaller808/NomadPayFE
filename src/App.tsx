@@ -44,22 +44,29 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const token = this.getAuthToken();
-const headers: Record<string, string> = {
-  'Content-Type': 'application/json',
-  ...(options.headers as Record<string, string>),
-};
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
 
-if (token) {
-  headers['Authorization'] = `Bearer ${token}`;
-}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    const requestOptions: RequestInit = {
+      ...options,
+      headers,
+      signal: controller.signal,
+    };
 
     // Try primary API first
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers,
-        timeout: 10000,
-      });
+      const response = await fetch(`${API_BASE}${endpoint}`, requestOptions);
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         return await response.json();
@@ -73,15 +80,28 @@ if (token) {
 
       throw new Error(`API Error: ${response.status}`);
     } catch (error) {
-      console.warn('Primary API failed, trying fallback:', error);
+      clearTimeout(timeoutId);
       
-      // Try fallback API
+      // Handle abort error (timeout)
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('Primary API request timed out, trying fallback');
+      } else {
+        console.warn('Primary API failed, trying fallback:', error);
+      }
+      
+      // Try fallback API with new AbortController
+      const fallbackController = new AbortController();
+      const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), 10000);
+      
+      const fallbackOptions: RequestInit = {
+        ...options,
+        headers,
+        signal: fallbackController.signal,
+      };
+
       try {
-        const response = await fetch(`${FALLBACK_API}${endpoint}`, {
-          ...options,
-          headers,
-          timeout: 10000,
-        });
+        const response = await fetch(`${FALLBACK_API}${endpoint}`, fallbackOptions);
+        clearTimeout(fallbackTimeoutId);
 
         if (response.ok) {
           return await response.json();
@@ -89,8 +109,15 @@ if (token) {
 
         throw new Error(`Fallback API Error: ${response.status}`);
       } catch (fallbackError) {
-        console.error('Both APIs failed:', fallbackError);
-        throw new Error('Service temporarily unavailable');
+        clearTimeout(fallbackTimeoutId);
+        
+        if (fallbackError instanceof Error && fallbackError.name === 'AbortError') {
+          console.error('Both APIs timed out');
+          throw new Error('Request timeout - please check your connection');
+        } else {
+          console.error('Both APIs failed:', fallbackError);
+          throw new Error('Service temporarily unavailable');
+        }
       }
     }
   }
