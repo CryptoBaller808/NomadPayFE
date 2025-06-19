@@ -44,14 +44,14 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const token = this.getAuthToken();
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
+const headers: Record<string, string> = {
+  'Content-Type': 'application/json',
+  ...(options.headers as Record<string, string>),
+};
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+if (token) {
+  headers['Authorization'] = `Bearer ${token}`;
+}
 
     // Try primary API first
     try {
