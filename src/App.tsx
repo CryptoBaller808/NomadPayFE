@@ -57,7 +57,7 @@ class ApiClient {
 
     // Create AbortController for timeout handling
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for better reliability
 
     const requestOptions: RequestInit = {
       ...options,
@@ -93,7 +93,7 @@ class ApiClient {
       
       // Try fallback API with new AbortController
       const fallbackController = new AbortController();
-      const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), 10000);
+      const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), 30000); // 30 second timeout for fallback
       
       const fallbackOptions: RequestInit = {
         ...options,
@@ -242,6 +242,9 @@ const AuthForm: React.FC<{
       if (response.success) {
         if (response.access_token && response.user) {
           localStorage.setItem('nomadpay_token', response.access_token);
+          if (response.refresh_token) {
+            localStorage.setItem('nomadpay_refresh_token', response.refresh_token);
+          }
           setSuccess(response.message || `${isLogin ? 'Login' : 'Registration'} successful!`);
           
           // Small delay to show success message before redirect
@@ -250,7 +253,8 @@ const AuthForm: React.FC<{
           }, 1000);
         } else {
           // Success response but missing required data
-          setError('Registration completed but login data is missing. Please try logging in.');
+          console.error('Missing data in response:', response);
+          setError(`${isLogin ? 'Login' : 'Registration'} completed but some data is missing. Please try again.`);
         }
       } else {
         // Explicit failure response
@@ -260,6 +264,8 @@ const AuthForm: React.FC<{
       // Network or other errors
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       
+      console.error('Authentication error:', error);
+      
       // Don't treat success messages as errors
       if (errorMessage.toLowerCase().includes('success') || errorMessage.toLowerCase().includes('registered successfully')) {
         // This is likely a success case that was incorrectly thrown as an error
@@ -268,6 +274,10 @@ const AuthForm: React.FC<{
           // Try to get user info and redirect
           window.location.reload();
         }, 1500);
+      } else if (errorMessage.includes('timeout')) {
+        setError('Connection timeout. The server may be slow. Please try again in a moment.');
+      } else if (errorMessage.includes('Service temporarily unavailable')) {
+        setError('Service temporarily unavailable. Please try again in a few minutes.');
       } else {
         setError(errorMessage);
       }
