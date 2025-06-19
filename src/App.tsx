@@ -240,6 +240,9 @@ const AuthForm: React.FC<{
 
       // Check if the response indicates success
       if (response.success) {
+        // Log the full response for debugging
+        console.log('Auth response received:', response);
+        
         if (response.access_token && response.user) {
           localStorage.setItem('nomadpay_token', response.access_token);
           if (response.refresh_token) {
@@ -252,9 +255,18 @@ const AuthForm: React.FC<{
             onSuccess(response.user, response.access_token);
           }, 1000);
         } else {
-          // Success response but missing required data
+          // Success response but missing required data - provide detailed error
           console.error('Missing data in response:', response);
-          setError(`${isLogin ? 'Login' : 'Registration'} completed but some data is missing. Please try again.`);
+          console.error('Expected: access_token and user object');
+          console.error('Received access_token:', !!response.access_token);
+          console.error('Received user:', !!response.user);
+          console.error('Available fields:', Object.keys(response));
+          
+          let missingFields = [];
+          if (!response.access_token) missingFields.push('access_token');
+          if (!response.user) missingFields.push('user');
+          
+          setError(`${isLogin ? 'Login' : 'Registration'} completed but missing: ${missingFields.join(', ')}. Please try again or contact support.`);
         }
       } else {
         // Explicit failure response
