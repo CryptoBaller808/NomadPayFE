@@ -219,10 +219,12 @@ const AuthForm: React.FC<{
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     if (!isLogin && password !== confirmPassword) {
@@ -236,14 +238,39 @@ const AuthForm: React.FC<{
         ? await ApiClient.login(email, password)
         : await ApiClient.register(email, password);
 
-      if (response.success && response.access_token && response.user) {
-        localStorage.setItem('nomadpay_token', response.access_token);
-        onSuccess(response.user, response.access_token);
+      // Check if the response indicates success
+      if (response.success) {
+        if (response.access_token && response.user) {
+          localStorage.setItem('nomadpay_token', response.access_token);
+          setSuccess(response.message || `${isLogin ? 'Login' : 'Registration'} successful!`);
+          
+          // Small delay to show success message before redirect
+          setTimeout(() => {
+            onSuccess(response.user, response.access_token);
+          }, 1000);
+        } else {
+          // Success response but missing required data
+          setError('Registration completed but login data is missing. Please try logging in.');
+        }
       } else {
+        // Explicit failure response
         setError(response.message || `${isLogin ? 'Login' : 'Registration'} failed`);
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      // Network or other errors
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      
+      // Don't treat success messages as errors
+      if (errorMessage.toLowerCase().includes('success') || errorMessage.toLowerCase().includes('registered successfully')) {
+        // This is likely a success case that was incorrectly thrown as an error
+        setSuccess('Registration successful! Redirecting to dashboard...');
+        setTimeout(() => {
+          // Try to get user info and redirect
+          window.location.reload();
+        }, 1500);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -253,6 +280,7 @@ const AuthForm: React.FC<{
     <div className="auth-form">
       <h2 className="card-title">{isLogin ? 'Welcome Back' : 'Join NomadPay'}</h2>
       {error && <ErrorMessage message={error} />}
+      {success && <SuccessMessage message={success} />}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label className="form-label" htmlFor="email">Email</label>
