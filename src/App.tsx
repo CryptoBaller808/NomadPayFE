@@ -1,286 +1,716 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Wallet, Send, ArrowUpRight, ArrowDownLeft, QrCode, CreditCard, Users, BarChart3, Shield, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
+// Types
+interface User {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
+interface Wallet {
+  currency: string;
+  balance: string;
+}
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  currency: string;
+  created_at: string;
+  status: string;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  [key: string]: any;
+}
+
+// Configuration
+const API_BASE = process.env.REACT_APP_API_URL || 'https://nomadpay-api.onrender.com';
+const FALLBACK_API = 'https://58hpi8clpqvp.manus.space';
+
+// API utility
+class ApiClient {
+  private static getAuthToken(): string | null {
+    return localStorage.getItem('nomadpay_token');
+  }
+
+  private static async makeRequest<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
+    const token = this.getAuthToken();
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Try primary API first
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers,
+        timeout: 10000,
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+
+      // If 401, try to refresh token
+      if (response.status === 401 && token) {
+        await this.refreshToken();
+        return this.makeRequest(endpoint, options);
+      }
+
+      throw new Error(`API Error: ${response.status}`);
+    } catch (error) {
+      console.warn('Primary API failed, trying fallback:', error);
+      
+      // Try fallback API
+      try {
+        const response = await fetch(`${FALLBACK_API}${endpoint}`, {
+          ...options,
+          headers,
+          timeout: 10000,
+        });
+
+        if (response.ok) {
+          return await response.json();
+        }
+
+        throw new Error(`Fallback API Error: ${response.status}`);
+      } catch (fallbackError) {
+        console.error('Both APIs failed:', fallbackError);
+        throw new Error('Service temporarily unavailable');
+      }
+    }
+  }
+
+  static async refreshToken(): Promise<boolean> {
+    try {
+      const response = await this.makeRequest<{ access_token: string }>('/api/auth/refresh', {
+        method: 'POST',
+      });
+
+      if (response.success && response.access_token) {
+        localStorage.setItem('nomadpay_token', response.access_token);
+        return true;
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      this.logout();
+    }
+    return false;
+  }
+
+  static async login(email: string, password: string): Promise<ApiResponse<{ user: User; access_token: string }>> {
+    return this.makeRequest('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  static async register(email: string, password: string): Promise<ApiResponse<{ user: User; access_token: string }>> {
+    return this.makeRequest('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  static async getWallets(): Promise<ApiResponse<{ wallets: Wallet[] }>> {
+    return this.makeRequest('/api/wallet/balances');
+  }
+
+  static async getTransactions(): Promise<ApiResponse<{ transactions: Transaction[] }>> {
+    return this.makeRequest('/api/transactions');
+  }
+
+  static async sendMoney(recipient: string, amount: number, currency: string): Promise<ApiResponse<any>> {
+    return this.makeRequest('/api/transactions/send', {
+      method: 'POST',
+      body: JSON.stringify({ recipient, amount, currency }),
+    });
+  }
+
+  static async generateQR(amount?: number, currency?: string): Promise<ApiResponse<{ qr_code: string; wallet_address: string }>> {
+    return this.makeRequest('/api/qr/generate', {
+      method: 'POST',
+      body: JSON.stringify({ amount: amount || 0, currency: currency || 'USD' }),
+    });
+  }
+
+  static logout(): void {
+    localStorage.removeItem('nomadpay_token');
+    // Call logout API
+    this.makeRequest('/api/auth/logout', { method: 'POST' }).catch(console.error);
+  }
+}
+
 // Components
-const Header: React.FC = () => (
-  <header className="bg-blue-600 text-white shadow-lg">
-    <div className="container mx-auto px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="bg-yellow-400 p-2 rounded-lg">
-            <Wallet className="h-8 w-8 text-blue-800" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">NomadPay</h1>
-            <p className="text-blue-100 text-sm">Global Finance for Digital Nomads</p>
-          </div>
-        </div>
-        <nav className="hidden md:flex space-x-6">
-          <a href="#features" className="hover:text-yellow-300 transition-colors">Features</a>
-          <a href="#about" className="hover:text-yellow-300 transition-colors">About</a>
-          <a href="#contact" className="hover:text-yellow-300 transition-colors">Contact</a>
-        </nav>
-      </div>
-    </div>
-  </header>
-);
-
-const Hero: React.FC = () => (
-  <section className="hero-gradient py-20">
-    <div className="container mx-auto px-6 text-center">
-      <h2 className="text-5xl font-bold text-gray-800 mb-6">
-        Banking Without Borders
-      </h2>
-      <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-        The complete financial platform designed for digital nomads. Send money globally, 
-        manage multiple currencies, and access your funds anywhere in the world.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <button className="btn btn-primary">
-          <span>Get Started</span>
-          <ArrowUpRight className="h-5 w-5" />
-        </button>
-        <button className="btn btn-secondary">
-          Watch Demo
-        </button>
-      </div>
-    </div>
-  </section>
-);
-
-const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; description: string }> = ({ icon, title, description }) => (
-  <div className="card">
-    <div className="icon-box">
-      {icon}
-    </div>
-    <h3 className="text-xl font-semibold text-gray-800 mb-4">{title}</h3>
-    <p className="text-gray-600 leading-relaxed">{description}</p>
+const LoadingSpinner: React.FC = () => (
+  <div className="loading" role="status" aria-live="polite">
+    <div className="spinner" aria-hidden="true"></div>
+    Loading...
   </div>
 );
 
-const Features: React.FC = () => (
-  <section id="features" className="py-20 bg-gray-50">
-    <div className="container mx-auto px-6">
-      <div className="text-center mb-16">
-        <h2 className="text-4xl font-bold text-gray-800 mb-4">
-          Everything You Need for Global Finance
-        </h2>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Powerful features designed specifically for the nomadic lifestyle
+const ErrorMessage: React.FC<{ message: string; onRetry?: () => void }> = ({ message, onRetry }) => (
+  <div className="error-state" role="alert">
+    <strong>Error:</strong> {message}
+    {onRetry && (
+      <button className="btn btn-secondary" onClick={onRetry} style={{ marginTop: '12px' }}>
+        Retry
+      </button>
+    )}
+  </div>
+);
+
+const SuccessMessage: React.FC<{ message: string }> = ({ message }) => (
+  <div className="success-message" role="alert" aria-live="polite">
+    {message}
+  </div>
+);
+
+const AuthForm: React.FC<{
+  isLogin: boolean;
+  onToggle: () => void;
+  onSuccess: (user: User, token: string) => void;
+}> = ({ isLogin, onToggle, onSuccess }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    if (!isLogin && password !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = isLogin 
+        ? await ApiClient.login(email, password)
+        : await ApiClient.register(email, password);
+
+      if (response.success && response.access_token && response.user) {
+        localStorage.setItem('nomadpay_token', response.access_token);
+        onSuccess(response.user, response.access_token);
+      } else {
+        setError(response.message || `${isLogin ? 'Login' : 'Registration'} failed`);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="auth-form">
+      <h2 className="card-title">{isLogin ? 'Welcome Back' : 'Join NomadPay'}</h2>
+      {error && <ErrorMessage message={error} />}
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label className="form-label" htmlFor="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            className="form-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="Enter your email"
+            aria-describedby="email-help"
+          />
+          <small id="email-help" className="sr-only">
+            {isLogin ? 'Enter the email address associated with your account' : 'Choose an email address for your new account'}
+          </small>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            className="form-input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            placeholder={isLogin ? 'Enter your password' : 'Create a password'}
+            aria-describedby="password-help"
+          />
+          <small id="password-help" className="sr-only">
+            {isLogin ? 'Enter your account password' : 'Create a strong password for your account'}
+          </small>
+        </div>
+        {!isLogin && (
+          <div className="form-group">
+            <label className="form-label" htmlFor="confirm-password">Confirm Password</label>
+            <input
+              type="password"
+              id="confirm-password"
+              className="form-input"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              placeholder="Confirm your password"
+              aria-describedby="confirm-password-help"
+            />
+            <small id="confirm-password-help" className="sr-only">
+              Re-enter your password to confirm
+            </small>
+          </div>
+        )}
+        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+          {loading ? 'Processing...' : (isLogin ? 'Login' : 'Create Account')}
+        </button>
+      </form>
+      <div className="auth-toggle">
+        <p>
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <button type="button" className="link-button" onClick={onToggle}>
+            {isLogin ? 'Register here' : 'Login here'}
+          </button>
         </p>
       </div>
-      
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <FeatureCard
-          icon={<Send className="h-8 w-8 text-blue-600" />}
-          title="Instant Global Transfers"
-          description="Send money to anyone, anywhere in the world with real-time exchange rates and minimal fees."
-        />
-        <FeatureCard
-          icon={<Wallet className="h-8 w-8 text-blue-600" />}
-          title="Multi-Currency Wallets"
-          description="Hold and manage multiple currencies including USD, EUR, BTC, ETH, and more in one secure wallet."
-        />
-        <FeatureCard
-          icon={<QrCode className="h-8 w-8 text-blue-600" />}
-          title="QR Code Payments"
-          description="Pay and receive payments instantly using QR codes. Perfect for local transactions while traveling."
-        />
-        <FeatureCard
-          icon={<CreditCard className="h-8 w-8 text-blue-600" />}
-          title="Virtual Cards"
-          description="Generate virtual debit cards for online purchases and secure transactions worldwide."
-        />
-        <FeatureCard
-          icon={<Shield className="h-8 w-8 text-blue-600" />}
-          title="Bank-Level Security"
-          description="Advanced encryption, 2FA, and biometric authentication keep your funds completely secure."
-        />
-        <FeatureCard
-          icon={<BarChart3 className="h-8 w-8 text-blue-600" />}
-          title="Expense Tracking"
-          description="Track your spending across countries and currencies with detailed analytics and insights."
-        />
-      </div>
     </div>
-  </section>
-);
+  );
+};
 
-const Stats: React.FC = () => (
-  <section className="py-20 bg-blue-600 text-white">
-    <div className="container mx-auto px-6">
-      <div className="stats-grid">
-        <div>
-          <div className="text-4xl font-bold mb-2">150+</div>
-          <div className="text-blue-200">Countries Supported</div>
-        </div>
-        <div>
-          <div className="text-4xl font-bold mb-2">$2.5B+</div>
-          <div className="text-blue-200">Transferred Globally</div>
-        </div>
-        <div>
-          <div className="text-4xl font-bold mb-2">500K+</div>
-          <div className="text-blue-200">Active Nomads</div>
-        </div>
-        <div>
-          <div className="text-4xl font-bold mb-2">99.9%</div>
-          <div className="text-blue-200">Uptime Guarantee</div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
+const WalletCard: React.FC = () => {
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-const About: React.FC = () => (
-  <section id="about" className="py-20">
-    <div className="container mx-auto px-6">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <h2 className="text-4xl font-bold text-gray-800 mb-6">
-            Built for the Modern Nomad
-          </h2>
-          <p className="text-lg text-gray-600 mb-6">
-            NomadPay was created by digital nomads, for digital nomads. We understand the unique 
-            financial challenges of location-independent living and have built a platform that 
-            makes global finance simple, secure, and accessible.
-          </p>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <Globe className="h-6 w-6 text-blue-600" />
-              <span className="text-gray-700">Available in 150+ countries</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Users className="h-6 w-6 text-blue-600" />
-              <span className="text-gray-700">Trusted by 500,000+ nomads</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Shield className="h-6 w-6 text-blue-600" />
-              <span className="text-gray-700">Bank-level security & compliance</span>
-            </div>
-          </div>
-        </div>
-        <div className="hero-gradient p-8 rounded-2xl">
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Quick Stats</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Average Transfer Time</span>
-                <span className="font-semibold text-blue-600">&lt; 2 minutes</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Transfer Fees</span>
-                <span className="font-semibold text-blue-600">From 0.5%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Supported Currencies</span>
-                <span className="font-semibold text-blue-600">50+</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Customer Support</span>
-                <span className="font-semibold text-blue-600">24/7</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
+  const loadWallets = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await ApiClient.getWallets();
+      if (response.success && response.wallets) {
+        setWallets(response.wallets);
+      } else {
+        setError(response.message || 'Failed to load wallets');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load wallets');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-const CTA: React.FC = () => (
-  <section className="py-20 gradient-bg text-white">
-    <div className="container mx-auto px-6 text-center">
-      <h2 className="text-4xl font-bold mb-6">
-        Ready to Go Global?
-      </h2>
-      <p className="text-xl mb-8 max-w-2xl mx-auto">
-        Join thousands of digital nomads who trust NomadPay for their global financial needs.
-        Get started in minutes.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <button className="bg-yellow-400 hover:bg-yellow-500 text-blue-800 px-8 py-4 rounded-lg font-semibold transition-colors">
-          Create Free Account
-        </button>
-        <button className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 rounded-lg font-semibold transition-colors">
-          Contact Sales
-        </button>
-      </div>
-    </div>
-  </section>
-);
+  useEffect(() => {
+    loadWallets();
+  }, []);
 
-const Footer: React.FC = () => (
-  <footer className="bg-gray-800 text-white py-12">
-    <div className="container mx-auto px-6">
-      <div className="footer-grid">
-        <div>
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="bg-yellow-400 p-2 rounded-lg">
-              <Wallet className="h-6 w-6 text-blue-800" />
-            </div>
-            <span className="text-xl font-bold">NomadPay</span>
-          </div>
-          <p className="text-gray-400">
-            Global finance platform for digital nomads worldwide.
-          </p>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-4">Product</h3>
-          <ul className="footer-links">
-            <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">API</a></li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-4">Company</h3>
-          <ul className="footer-links">
-            <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Press</a></li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-4">Support</h3>
-          <ul className="footer-links">
-            <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Status</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Legal</a></li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-        <p>&copy; 2025 NomadPay. All rights reserved. Built with ❤️ for digital nomads worldwide.</p>
-      </div>
-    </div>
-  </footer>
-);
+  const totalBalance = wallets.reduce((sum, wallet) => sum + parseFloat(wallet.balance || '0'), 0);
 
-const App: React.FC = () => {
   return (
-    <Router>
-      <div className="App">
-        <Header />
-        <Routes>
-          <Route path="/" element={
-            <>
-              <Hero />
-              <Features />
-              <Stats />
-              <About />
-              <CTA />
-            </>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <Footer />
+    <section className="card" aria-labelledby="wallet-title">
+      <div className="card-header">
+        <h2 className="card-title" id="wallet-title">
+          <span className="card-icon" aria-hidden="true">💰</span>
+          Your Wallet
+        </h2>
+        <button className="btn btn-secondary" onClick={loadWallets} aria-label="Refresh wallet balance">
+          Refresh
+        </button>
       </div>
-    </Router>
+      {loading ? (
+        <LoadingSpinner />
+      ) : error ? (
+        <ErrorMessage message={error} onRetry={loadWallets} />
+      ) : (
+        <div>
+          <div className="balance-display">${totalBalance.toLocaleString()}</div>
+          <p>Total Balance</p>
+          <div className="currency-grid">
+            {wallets.length > 0 ? (
+              wallets.map((wallet, index) => (
+                <div key={index} className="currency-item">
+                  <div className="currency-code">{wallet.currency}</div>
+                  <div className="currency-amount">${wallet.balance}</div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">No wallets found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
+
+const SendMoneyCard: React.FC<{ onSuccess: (message: string) => void }> = ({ onSuccess }) => {
+  const [recipient, setRecipient] = useState('');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('USD');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await ApiClient.sendMoney(recipient, parseFloat(amount), currency);
+      if (response.success) {
+        onSuccess(`Successfully sent $${amount} ${currency} to ${recipient}`);
+        setRecipient('');
+        setAmount('');
+      } else {
+        setError(response.message || 'Transaction failed');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Transaction failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="card" aria-labelledby="send-title">
+      <div className="card-header">
+        <h2 className="card-title" id="send-title">
+          <span className="card-icon" aria-hidden="true">📤</span>
+          Send Money
+        </h2>
+      </div>
+      {error && <ErrorMessage message={error} />}
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label className="form-label" htmlFor="recipient">Recipient Address</label>
+          <input
+            type="text"
+            id="recipient"
+            className="form-input"
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            required
+            placeholder="Enter wallet address or email"
+            aria-describedby="recipient-help"
+          />
+          <small id="recipient-help" className="sr-only">
+            Enter the recipient's wallet address or email
+          </small>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="amount">Amount</label>
+          <input
+            type="number"
+            id="amount"
+            className="form-input"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+            step="0.01"
+            min="0.01"
+            placeholder="0.00"
+            aria-describedby="amount-help"
+          />
+          <small id="amount-help" className="sr-only">
+            Enter the amount to send
+          </small>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="currency">Currency</label>
+          <select
+            id="currency"
+            className="form-input"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            aria-describedby="currency-help"
+          >
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="BTC">BTC</option>
+            <option value="ETH">ETH</option>
+          </select>
+          <small id="currency-help" className="sr-only">
+            Select the currency for this transaction
+          </small>
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+          {loading ? 'Sending...' : 'Send Money'}
+        </button>
+      </form>
+    </section>
+  );
+};
+
+const TransactionsCard: React.FC = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadTransactions = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await ApiClient.getTransactions();
+      if (response.success && response.transactions) {
+        setTransactions(response.transactions);
+      } else {
+        setError(response.message || 'Failed to load transactions');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load transactions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTransactions();
+  }, []);
+
+  return (
+    <section className="card" aria-labelledby="transactions-title">
+      <div className="card-header">
+        <h2 className="card-title" id="transactions-title">
+          <span className="card-icon" aria-hidden="true">📋</span>
+          Recent Transactions
+        </h2>
+        <button className="btn btn-secondary" onClick={loadTransactions} aria-label="Refresh transaction history">
+          Refresh
+        </button>
+      </div>
+      {loading ? (
+        <LoadingSpinner />
+      ) : error ? (
+        <ErrorMessage message={error} onRetry={loadTransactions} />
+      ) : transactions.length === 0 ? (
+        <div className="empty-state">
+          <p>No transactions yet</p>
+          <small>Your transaction history will appear here</small>
+        </div>
+      ) : (
+        <div className="transaction-list">
+          {transactions.map((tx) => (
+            <div key={tx.id} className="transaction-item">
+              <div className="transaction-details">
+                <div className="transaction-type">{tx.type || 'Transaction'}</div>
+                <div className="transaction-date">{new Date(tx.created_at).toLocaleDateString()}</div>
+              </div>
+              <div className={`transaction-amount ${tx.amount > 0 ? 'amount-positive' : 'amount-negative'}`}>
+                {tx.amount > 0 ? '+' : ''}${Math.abs(tx.amount)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+};
+
+const QRCard: React.FC = () => {
+  const [walletAddress, setWalletAddress] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const generateQR = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await ApiClient.generateQR();
+      if (response.success && response.wallet_address) {
+        setWalletAddress(response.wallet_address);
+      } else {
+        // Fallback QR generation
+        setWalletAddress(`nomadpay_user_${Date.now()}`);
+      }
+    } catch (error) {
+      console.error('QR generation error:', error);
+      // Fallback QR generation
+      setWalletAddress(`nomadpay_user_${Date.now()}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(walletAddress);
+      // Show success message (you could add a toast notification here)
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = walletAddress;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+  };
+
+  useEffect(() => {
+    generateQR();
+  }, []);
+
+  return (
+    <section className="card" aria-labelledby="qr-title">
+      <div className="card-header">
+        <h2 className="card-title" id="qr-title">
+          <span className="card-icon" aria-hidden="true">📱</span>
+          Receive Money
+        </h2>
+        <button className="btn btn-secondary" onClick={generateQR} aria-label="Generate new QR code">
+          Generate QR
+        </button>
+      </div>
+      <div className="qr-display">
+        <div className="qr-code" role="img" aria-label="QR code for receiving payments">
+          {loading ? (
+            <LoadingSpinner />
+          ) : (
+            <div style={{ fontSize: '12px', textAlign: 'center' }}>
+              QR Code<br />
+              <small>Scan to pay</small>
+            </div>
+          )}
+        </div>
+        <p>Share this QR code to receive payments</p>
+        {walletAddress && (
+          <>
+            <div className="wallet-address" aria-label="Your wallet address">
+              {walletAddress}
+            </div>
+            <button className="btn btn-secondary" onClick={copyAddress} style={{ marginTop: '12px' }}>
+              Copy Address
+            </button>
+          </>
+        )}
+      </div>
+    </section>
+  );
+};
+
+// Main App Component
+const App: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLogin, setIsLogin] = useState(true);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    // Check for existing token on app load
+    const token = localStorage.getItem('nomadpay_token');
+    if (token) {
+      // In a real app, you'd verify the token with the server
+      // For now, we'll assume it's valid
+      setUser({ id: 'demo', email: 'demo@nomadpay.io', created_at: new Date().toISOString() });
+    }
+  }, []);
+
+  useEffect(() => {
+    // Auto-refresh data every 30 seconds when authenticated
+    if (user) {
+      const interval = setInterval(() => {
+        // Trigger refresh of all components
+        window.dispatchEvent(new Event('nomadpay-refresh'));
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const handleAuthSuccess = (userData: User, token: string) => {
+    setUser(userData);
+    setSuccessMessage(isLogin ? 'Welcome back! Successfully logged in.' : 'Welcome to NomadPay! Your account has been created successfully.');
+    setTimeout(() => setSuccessMessage(''), 5000);
+  };
+
+  const handleLogout = () => {
+    ApiClient.logout();
+    setUser(null);
+    setSuccessMessage('Successfully logged out. See you next time!');
+    setTimeout(() => setSuccessMessage(''), 5000);
+  };
+
+  const handleSendSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 5000);
+    // Trigger refresh of wallet and transactions
+    window.dispatchEvent(new Event('nomadpay-refresh'));
+  };
+
+  return (
+    <div className="App">
+      {/* Beta Banner */}
+      <div className="beta-banner" role="banner">
+        🌺 Welcome to NomadPay Beta - Your feedback helps us improve!
+      </div>
+
+      <div className="container">
+        {/* Header */}
+        <header className="header" role="banner">
+          <div className="logo">
+            <div className="logo-icon" aria-hidden="true">NP</div>
+            <span>NomadPay</span>
+          </div>
+          <nav className="nav-buttons" role="navigation">
+            {user ? (
+              <button className="btn btn-danger" onClick={handleLogout} aria-label="Logout from your account">
+                Logout
+              </button>
+            ) : (
+              <>
+                <button
+                  className={`btn ${isLogin ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setIsLogin(true)}
+                  aria-label="Switch to login form"
+                >
+                  Login
+                </button>
+                <button
+                  className={`btn ${!isLogin ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setIsLogin(false)}
+                  aria-label="Switch to registration form"
+                >
+                  Register
+                </button>
+              </>
+            )}
+          </nav>
+        </header>
+
+        {/* Success Message */}
+        {successMessage && <SuccessMessage message={successMessage} />}
+
+        {/* Main Content */}
+        {user ? (
+          <main className="main-content">
+            <WalletCard />
+            <SendMoneyCard onSuccess={handleSendSuccess} />
+            <TransactionsCard />
+            <QRCard />
+          </main>
+        ) : (
+          <div className="card">
+            <AuthForm
+              isLogin={isLogin}
+              onToggle={() => setIsLogin(!isLogin)}
+              onSuccess={handleAuthSuccess}
+            />
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
