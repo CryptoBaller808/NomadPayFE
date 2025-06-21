@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import './brand-styles.css'; // ✅ This is the new branding import
+import logo from './assets/logo.svg';
 
 // Types
 interface User {
@@ -740,8 +741,7 @@ const App: React.FC = () => {
         {/* Header */}
         <header className="header" role="banner">
           <div className="logo">
-            <div className="logo-icon" aria-hidden="true">NP</div>
-            <span>NomadPay</span>
+            <img src={logo} alt="NomadPay Logo" className="logo-img" />
           </div>
           <nav className="nav-buttons" role="navigation">
             {user ? (
