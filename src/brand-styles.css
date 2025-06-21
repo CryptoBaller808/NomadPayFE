@@ -382,3 +382,13 @@ body {
 .w-full { width: 100%; }
 .h-full { height: 100%; }
 
+.logo-img {
+  height: 42px; /* Adjust as needed */
+  width: auto;
+  display: inline-block;
+  object-fit: contain;
+  margin-right: 12px;
+  vertical-align: middle;
+  border-radius: 8px;
+  box-shadow: var(--shadow-soft);
+}
