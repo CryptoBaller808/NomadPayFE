@@ -1,3 +1,6 @@
+import React from 'react';
+import './App.css';
+import './brand-styles.css'; // ✅ This is your new branding import
 * {
   margin: 0;
   padding: 0;
