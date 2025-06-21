@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import './brand-styles.css'; // ✅ This is the new branding import
 
 // Types
 interface User {
