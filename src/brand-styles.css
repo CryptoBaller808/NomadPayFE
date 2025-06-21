@@ -1,0 +1,384 @@
+/* NomadPay Brand-Aligned Styles */
+/* Based on official NomadPay logo color scheme */
+
+:root {
+  /* Primary Brand Colors from Logo */
+  --primary-blue-dark: #051559;
+  --primary-blue-light: #0A1F8E;
+  --gold-accent-light: #FFD34E;
+  --gold-accent-dark: #F4C542;
+  
+  /* Neutral Colors */
+  --background-light: #FAFBFC;
+  --background-white: #FFFFFF;
+  --text-navy: #1A2B5C;
+  --text-white: #FFFFFF;
+  --text-gray: #6B7280;
+  --border-light: #E5E7EB;
+  
+  /* Gradient Definitions */
+  --gradient-primary: linear-gradient(135deg, var(--primary-blue-dark) 0%, var(--primary-blue-light) 100%);
+  --gradient-gold: linear-gradient(135deg, var(--gold-accent-dark) 0%, var(--gold-accent-light) 100%);
+  --gradient-background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  
+  /* Shadow Definitions */
+  --shadow-soft: 0 4px 6px -1px rgba(5, 21, 89, 0.1), 0 2px 4px -1px rgba(5, 21, 89, 0.06);
+  --shadow-medium: 0 10px 15px -3px rgba(5, 21, 89, 0.1), 0 4px 6px -2px rgba(5, 21, 89, 0.05);
+  --shadow-large: 0 20px 25px -5px rgba(5, 21, 89, 0.1), 0 10px 10px -5px rgba(5, 21, 89, 0.04);
+}
+
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--gradient-background);
+  color: var(--text-navy);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Beta Banner */
+.beta-banner {
+  background: var(--gradient-gold);
+  color: var(--text-navy);
+  text-align: center;
+  padding: 12px 20px;
+  font-weight: 500;
+  font-size: 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Header Styles */
+.header {
+  background: var(--background-white);
+  padding: 20px 40px;
+  border-radius: 20px;
+  margin: 20px;
+  box-shadow: var(--shadow-medium);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+}
+
+.brand-text {
+  font-size: 28px;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Button Styles */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: var(--text-white);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn-gold {
+  background: var(--gradient-gold);
+  color: var(--text-navy);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn-secondary {
+  background: var(--background-white);
+  color: var(--primary-blue-dark);
+  border: 2px solid var(--primary-blue-light);
+}
+
+.btn-secondary:hover {
+  background: var(--primary-blue-light);
+  color: var(--text-white);
+}
+
+.btn-logout {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: var(--text-white);
+}
+
+.btn-logout:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.3);
+}
+
+/* Card Styles */
+.card {
+  background: var(--background-white);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: var(--shadow-medium);
+  border: 1px solid var(--border-light);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-large);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-white);
+  font-size: 18px;
+}
+
+.card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-navy);
+}
+
+/* Form Styles */
+.form-container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 40px;
+  background: var(--background-white);
+  border-radius: 24px;
+  box-shadow: var(--shadow-large);
+  border: 1px solid var(--border-light);
+}
+
+.form-title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-navy);
+  margin-bottom: 8px;
+}
+
+.form-subtitle {
+  text-align: center;
+  color: var(--text-gray);
+  margin-bottom: 32px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-navy);
+  margin-bottom: 8px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid var(--border-light);
+  border-radius: 12px;
+  font-size: 16px;
+  color: var(--text-navy);
+  background: var(--background-white);
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-blue-light);
+  box-shadow: 0 0 0 3px rgba(10, 31, 142, 0.1);
+}
+
+.form-input::placeholder {
+  color: var(--text-gray);
+}
+
+/* Dashboard Layout */
+.dashboard-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Wallet Card Specific */
+.wallet-card {
+  background: var(--background-white);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: var(--shadow-medium);
+  position: relative;
+  overflow: hidden;
+}
+
+.wallet-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+/* Error and Success Messages */
+.alert {
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.alert-error {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.alert-success {
+  background: #F0FDF4;
+  color: #16A34A;
+  border: 1px solid #BBF7D0;
+}
+
+/* Loading States */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-gray);
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-light);
+  border-top: 2px solid var(--primary-blue-light);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header {
+    margin: 10px;
+    padding: 15px 20px;
+    border-radius: 16px;
+  }
+  
+  .brand-text {
+    font-size: 24px;
+  }
+  
+  .logo {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .dashboard-container {
+    padding: 10px;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+  
+  .form-container {
+    margin: 10px;
+    padding: 30px 20px;
+    border-radius: 20px;
+  }
+}
+
+/* Utility Classes */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.mb-4 { margin-bottom: 32px; }
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mt-4 { margin-top: 32px; }
+
+.flex { display: flex; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
