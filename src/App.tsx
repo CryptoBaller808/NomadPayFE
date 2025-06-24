@@ -1,286 +1,470 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Wallet, Send, ArrowUpRight, ArrowDownLeft, QrCode, CreditCard, Users, BarChart3, Shield, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Components
-const Header: React.FC = () => (
-  <header className="bg-blue-600 text-white shadow-lg">
-    <div className="container mx-auto px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="bg-yellow-400 p-2 rounded-lg">
-            <Wallet className="h-8 w-8 text-blue-800" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">NomadPay</h1>
-            <p className="text-blue-100 text-sm">Global Finance for Digital Nomads</p>
-          </div>
-        </div>
-        <nav className="hidden md:flex space-x-6">
-          <a href="#features" className="hover:text-yellow-300 transition-colors">Features</a>
-          <a href="#about" className="hover:text-yellow-300 transition-colors">About</a>
-          <a href="#contact" className="hover:text-yellow-300 transition-colors">Contact</a>
-        </nav>
-      </div>
-    </div>
-  </header>
-);
+// Types
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
-const Hero: React.FC = () => (
-  <section className="hero-gradient py-20">
-    <div className="container mx-auto px-6 text-center">
-      <h2 className="text-5xl font-bold text-gray-800 mb-6">
-        Banking Without Borders
-      </h2>
-      <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-        The complete financial platform designed for digital nomads. Send money globally, 
-        manage multiple currencies, and access your funds anywhere in the world.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <button className="btn btn-primary">
-          <span>Get Started</span>
-          <ArrowUpRight className="h-5 w-5" />
-        </button>
-        <button className="btn btn-secondary">
-          Watch Demo
-        </button>
-      </div>
-    </div>
-  </section>
-);
+interface Transaction {
+  id: string;
+  type: 'send' | 'receive';
+  amount: number;
+  currency: string;
+  recipient?: string;
+  sender?: string;
+  status: 'completed' | 'pending' | 'failed';
+  timestamp: string;
+}
 
-const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; description: string }> = ({ icon, title, description }) => (
-  <div className="card">
-    <div className="icon-box">
-      {icon}
-    </div>
-    <h3 className="text-xl font-semibold text-gray-800 mb-4">{title}</h3>
-    <p className="text-gray-600 leading-relaxed">{description}</p>
-  </div>
-);
+interface Balance {
+  currency: string;
+  amount: number;
+}
 
-const Features: React.FC = () => (
-  <section id="features" className="py-20 bg-gray-50">
-    <div className="container mx-auto px-6">
-      <div className="text-center mb-16">
-        <h2 className="text-4xl font-bold text-gray-800 mb-4">
-          Everything You Need for Global Finance
-        </h2>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Powerful features designed specifically for the nomadic lifestyle
-        </p>
-      </div>
-      
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <FeatureCard
-          icon={<Send className="h-8 w-8 text-blue-600" />}
-          title="Instant Global Transfers"
-          description="Send money to anyone, anywhere in the world with real-time exchange rates and minimal fees."
-        />
-        <FeatureCard
-          icon={<Wallet className="h-8 w-8 text-blue-600" />}
-          title="Multi-Currency Wallets"
-          description="Hold and manage multiple currencies including USD, EUR, BTC, ETH, and more in one secure wallet."
-        />
-        <FeatureCard
-          icon={<QrCode className="h-8 w-8 text-blue-600" />}
-          title="QR Code Payments"
-          description="Pay and receive payments instantly using QR codes. Perfect for local transactions while traveling."
-        />
-        <FeatureCard
-          icon={<CreditCard className="h-8 w-8 text-blue-600" />}
-          title="Virtual Cards"
-          description="Generate virtual debit cards for online purchases and secure transactions worldwide."
-        />
-        <FeatureCard
-          icon={<Shield className="h-8 w-8 text-blue-600" />}
-          title="Bank-Level Security"
-          description="Advanced encryption, 2FA, and biometric authentication keep your funds completely secure."
-        />
-        <FeatureCard
-          icon={<BarChart3 className="h-8 w-8 text-blue-600" />}
-          title="Expense Tracking"
-          description="Track your spending across countries and currencies with detailed analytics and insights."
-        />
-      </div>
-    </div>
-  </section>
-);
-
-const Stats: React.FC = () => (
-  <section className="py-20 bg-blue-600 text-white">
-    <div className="container mx-auto px-6">
-      <div className="stats-grid">
-        <div>
-          <div className="text-4xl font-bold mb-2">150+</div>
-          <div className="text-blue-200">Countries Supported</div>
-        </div>
-        <div>
-          <div className="text-4xl font-bold mb-2">$2.5B+</div>
-          <div className="text-blue-200">Transferred Globally</div>
-        </div>
-        <div>
-          <div className="text-4xl font-bold mb-2">500K+</div>
-          <div className="text-blue-200">Active Nomads</div>
-        </div>
-        <div>
-          <div className="text-4xl font-bold mb-2">99.9%</div>
-          <div className="text-blue-200">Uptime Guarantee</div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
-
-const About: React.FC = () => (
-  <section id="about" className="py-20">
-    <div className="container mx-auto px-6">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <h2 className="text-4xl font-bold text-gray-800 mb-6">
-            Built for the Modern Nomad
-          </h2>
-          <p className="text-lg text-gray-600 mb-6">
-            NomadPay was created by digital nomads, for digital nomads. We understand the unique 
-            financial challenges of location-independent living and have built a platform that 
-            makes global finance simple, secure, and accessible.
-          </p>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <Globe className="h-6 w-6 text-blue-600" />
-              <span className="text-gray-700">Available in 150+ countries</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Users className="h-6 w-6 text-blue-600" />
-              <span className="text-gray-700">Trusted by 500,000+ nomads</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Shield className="h-6 w-6 text-blue-600" />
-              <span className="text-gray-700">Bank-level security & compliance</span>
-            </div>
-          </div>
-        </div>
-        <div className="hero-gradient p-8 rounded-2xl">
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Quick Stats</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Average Transfer Time</span>
-                <span className="font-semibold text-blue-600">&lt; 2 minutes</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Transfer Fees</span>
-                <span className="font-semibold text-blue-600">From 0.5%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Supported Currencies</span>
-                <span className="font-semibold text-blue-600">50+</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Customer Support</span>
-                <span className="font-semibold text-blue-600">24/7</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
-
-const CTA: React.FC = () => (
-  <section className="py-20 gradient-bg text-white">
-    <div className="container mx-auto px-6 text-center">
-      <h2 className="text-4xl font-bold mb-6">
-        Ready to Go Global?
-      </h2>
-      <p className="text-xl mb-8 max-w-2xl mx-auto">
-        Join thousands of digital nomads who trust NomadPay for their global financial needs.
-        Get started in minutes.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <button className="bg-yellow-400 hover:bg-yellow-500 text-blue-800 px-8 py-4 rounded-lg font-semibold transition-colors">
-          Create Free Account
-        </button>
-        <button className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 rounded-lg font-semibold transition-colors">
-          Contact Sales
-        </button>
-      </div>
-    </div>
-  </section>
-);
-
-const Footer: React.FC = () => (
-  <footer className="bg-gray-800 text-white py-12">
-    <div className="container mx-auto px-6">
-      <div className="footer-grid">
-        <div>
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="bg-yellow-400 p-2 rounded-lg">
-              <Wallet className="h-6 w-6 text-blue-800" />
-            </div>
-            <span className="text-xl font-bold">NomadPay</span>
-          </div>
-          <p className="text-gray-400">
-            Global finance platform for digital nomads worldwide.
-          </p>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-4">Product</h3>
-          <ul className="footer-links">
-            <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">API</a></li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-4">Company</h3>
-          <ul className="footer-links">
-            <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Press</a></li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-4">Support</h3>
-          <ul className="footer-links">
-            <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Status</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Legal</a></li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-        <p>&copy; 2025 NomadPay. All rights reserved. Built with ❤️ for digital nomads worldwide.</p>
-      </div>
-    </div>
-  </footer>
-);
+const API_BASE = 'https://nomadpay-api.onrender.com';
 
 const App: React.FC = () => {
+  const [currentSection, setCurrentSection] = useState<string>('home');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [success, setSuccess] = useState<{ [key: string]: string }>({});
+
+  // Data states
+  const [balances, setBalances] = useState<Balance[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [totalBalance, setTotalBalance] = useState<string>('$0.00');
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem('nomadpay_token');
+    const userData = localStorage.getItem('nomadpay_user');
+    
+    if (token && userData) {
+      setIsAuthenticated(true);
+      setUser(JSON.parse(userData));
+      setCurrentSection('dashboard');
+      loadUserData();
+    }
+  }, []);
+
+  const showSection = (section: string) => {
+    setCurrentSection(section);
+    clearMessages();
+  };
+
+  const clearMessages = () => {
+    setErrors({});
+    setSuccess({});
+  };
+
+  const setLoadingState = (key: string, state: boolean) => {
+    setLoading(prev => ({ ...prev, [key]: state }));
+  };
+
+  const setError = (key: string, message: string) => {
+    setErrors(prev => ({ ...prev, [key]: message }));
+  };
+
+  const setSuccessMessage = (key: string, message: string) => {
+    setSuccess(prev => ({ ...prev, [key]: message }));
+  };
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    setLoadingState('login', true);
+    clearMessages();
+
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem('nomadpay_token', data.data.access_token);
+        localStorage.setItem('nomadpay_user', JSON.stringify(data.data.user));
+        setIsAuthenticated(true);
+        setUser(data.data.user);
+        setSuccessMessage('login', 'Welcome back! Successfully logged in.');
+        setTimeout(() => {
+          setCurrentSection('dashboard');
+          loadUserData();
+        }, 1000);
+      } else {
+        setError('login', data.message || 'Login failed. Please try again.');
+      }
+    } catch (error) {
+      setError('login', 'Network error. Please check your connection.');
+    } finally {
+      setLoadingState('login', false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    setLoadingState('register', true);
+    clearMessages();
+
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem('nomadpay_token', data.data.access_token);
+        localStorage.setItem('nomadpay_user', JSON.stringify(data.data.user));
+        setIsAuthenticated(true);
+        setUser(data.data.user);
+        setSuccessMessage('register', 'Account created successfully! Welcome to NomadPay.');
+        setTimeout(() => {
+          setCurrentSection('dashboard');
+          loadUserData();
+        }, 1000);
+      } else {
+        setError('register', data.message || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      setError('register', 'Network error. Please check your connection.');
+    } finally {
+      setLoadingState('register', false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('nomadpay_token');
+    localStorage.removeItem('nomadpay_user');
+    setIsAuthenticated(false);
+    setUser(null);
+    setCurrentSection('home');
+    setBalances([]);
+    setTransactions([]);
+    setTotalBalance('$0.00');
+  };
+
+  const loadUserData = async () => {
+    const token = localStorage.getItem('nomadpay_token');
+    if (!token) return;
+
+    // Load balances
+    setLoadingState('balance', true);
+    try {
+      // Mock data for demonstration
+      const mockBalances: Balance[] = [
+        { currency: 'USD', amount: 1250.75 },
+        { currency: 'EUR', amount: 850.50 },
+        { currency: 'BTC', amount: 0.05 }
+      ];
+      setBalances(mockBalances);
+      setTotalBalance('$2,100.25');
+    } catch (error) {
+      setError('balance', 'Failed to load wallet balance');
+    } finally {
+      setLoadingState('balance', false);
+    }
+
+    // Load transactions
+    setLoadingState('transactions', true);
+    try {
+      // Mock data for demonstration
+      const mockTransactions: Transaction[] = [
+        {
+          id: '1',
+          type: 'receive',
+          amount: 500,
+          currency: 'USD',
+          sender: 'john@example.com',
+          status: 'completed',
+          timestamp: '2024-06-24 10:30'
+        },
+        {
+          id: '2',
+          type: 'send',
+          amount: 250,
+          currency: 'EUR',
+          recipient: 'jane@example.com',
+          status: 'pending',
+          timestamp: '2024-06-24 09:15'
+        }
+      ];
+      setTransactions(mockTransactions);
+    } catch (error) {
+      setError('transactions', 'Failed to load transactions');
+    } finally {
+      setLoadingState('transactions', false);
+    }
+  };
+
+  const refreshData = () => {
+    if (isAuthenticated) {
+      loadUserData();
+    }
+  };
+
   return (
-    <Router>
-      <div className="App">
-        <Header />
-        <Routes>
-          <Route path="/" element={
-            <>
-              <Hero />
-              <Features />
-              <Stats />
-              <About />
-              <CTA />
-            </>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <Footer />
-      </div>
-    </Router>
+    <div className="App">
+      {/* Header */}
+      <header className="header">
+        <nav className="nav container">
+          <div className="logo">
+            🌺 NomadPay
+          </div>
+          <ul className="nav-links">
+            <li><a href="#" onClick={() => showSection('home')}>Home</a></li>
+            {isAuthenticated && (
+              <>
+                <li><a href="#" onClick={() => showSection('dashboard')}>Dashboard</a></li>
+                <li><a href="#" onClick={() => showSection('send')}>Send</a></li>
+                <li><a href="#" onClick={() => showSection('receive')}>Receive</a></li>
+              </>
+            )}
+          </ul>
+          <div className="auth-buttons">
+            {!isAuthenticated ? (
+              <>
+                <a href="#" className="btn btn-secondary" onClick={() => showSection('login')}>Login</a>
+                <a href="#" className="btn btn-primary" onClick={() => showSection('register')}>Sign Up</a>
+              </>
+            ) : (
+              <a href="#" className="btn btn-secondary" onClick={logout}>Logout</a>
+            )}
+          </div>
+        </nav>
+      </header>
+
+      {/* Main Content */}
+      <main className="main-content container">
+        {/* Home Section */}
+        {currentSection === 'home' && (
+          <section className="hero">
+            <h1>Welcome to NomadPay</h1>
+            <p>The secure digital wallet designed for digital nomads and global travelers. Send, receive, and manage your money anywhere in the world.</p>
+            <div className="mt-2">
+              <a href="#" className="btn btn-primary" onClick={() => showSection('register')}>Get Started</a>
+              <a href="#" className="btn btn-secondary" onClick={() => showSection('login')}>Sign In</a>
+            </div>
+          </section>
+        )}
+
+        {/* Login Form */}
+        {currentSection === 'login' && (
+          <section className="form-container active">
+            <h2 className="text-center mb-2">Welcome Back</h2>
+            <form onSubmit={handleLogin}>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input type="email" name="email" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <input type="password" name="password" required />
+              </div>
+              {loading.login && (
+                <div className="loading active">
+                  <div className="spinner"></div>
+                  Signing you in...
+                </div>
+              )}
+              {errors.login && <div className="error-message" style={{display: 'block'}}>{errors.login}</div>}
+              {success.login && <div className="success-message" style={{display: 'block'}}>{success.login}</div>}
+              <button type="submit" className="btn btn-primary" style={{width: '100%'}} disabled={loading.login}>
+                Sign In
+              </button>
+            </form>
+            <p className="text-center mt-2">
+              Don't have an account? <a href="#" onClick={() => showSection('register')} style={{color: '#FFD700'}}>Sign up</a>
+            </p>
+          </section>
+        )}
+
+        {/* Register Form */}
+        {currentSection === 'register' && (
+          <section className="form-container active">
+            <h2 className="text-center mb-2">Join NomadPay</h2>
+            <form onSubmit={handleRegister}>
+              <div className="form-group">
+                <label htmlFor="name">Full Name</label>
+                <input type="text" name="name" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input type="email" name="email" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <input type="password" name="password" required />
+              </div>
+              {loading.register && (
+                <div className="loading active">
+                  <div className="spinner"></div>
+                  Creating your account...
+                </div>
+              )}
+              {errors.register && <div className="error-message" style={{display: 'block'}}>{errors.register}</div>}
+              {success.register && <div className="success-message" style={{display: 'block'}}>{success.register}</div>}
+              <button type="submit" className="btn btn-primary" style={{width: '100%'}} disabled={loading.register}>
+                Create Account
+              </button>
+            </form>
+            <p className="text-center mt-2">
+              Already have an account? <a href="#" onClick={() => showSection('login')} style={{color: '#FFD700'}}>Sign in</a>
+            </p>
+          </section>
+        )}
+
+        {/* Dashboard */}
+        {currentSection === 'dashboard' && isAuthenticated && (
+          <section className="dashboard active">
+            <div className="card">
+              <h3>💰 Wallet Balance</h3>
+              {loading.balance ? (
+                <div className="loading active">
+                  <div className="spinner"></div>
+                  Loading balance...
+                </div>
+              ) : (
+                <div>
+                  <div className="balance">{totalBalance}</div>
+                  <div>
+                    {balances.map((balance, index) => (
+                      <div key={index} style={{marginBottom: '0.5rem'}}>
+                        {balance.currency}: {balance.amount.toFixed(2)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {errors.balance && <div className="error-message" style={{display: 'block'}}>{errors.balance}</div>}
+            </div>
+
+            <div className="card">
+              <h3>📊 Recent Transactions</h3>
+              {loading.transactions ? (
+                <div className="loading active">
+                  <div className="spinner"></div>
+                  Loading transactions...
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">📝</div>
+                  <p>No transactions yet</p>
+                  <p>Start by sending or receiving money!</p>
+                </div>
+              ) : (
+                <div>
+                  {transactions.map((transaction) => (
+                    <div key={transaction.id} className="transaction-item">
+                      <div>
+                        <div>{transaction.type === 'send' ? '↗️ Sent' : '↙️ Received'}</div>
+                        <div style={{fontSize: '0.9rem', color: '#888'}}>
+                          {transaction.type === 'send' ? `To: ${transaction.recipient}` : `From: ${transaction.sender}`}
+                        </div>
+                      </div>
+                      <div>
+                        <div>{transaction.amount} {transaction.currency}</div>
+                        <div className={`transaction-status status-${transaction.status}`}>
+                          {transaction.status}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {errors.transactions && <div className="error-message" style={{display: 'block'}}>{errors.transactions}</div>}
+            </div>
+
+            <div className="card">
+              <h3>🚀 Quick Actions</h3>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                <button className="btn btn-primary" onClick={() => showSection('send')}>Send Money</button>
+                <button className="btn btn-secondary" onClick={() => showSection('receive')}>Receive Money</button>
+                <button className="btn btn-secondary" onClick={refreshData}>Refresh Data</button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Send Money */}
+        {currentSection === 'send' && isAuthenticated && (
+          <section className="form-container active">
+            <h2 className="text-center mb-2">Send Money</h2>
+            <form>
+              <div className="form-group">
+                <label htmlFor="recipient">Recipient Address</label>
+                <input type="text" placeholder="Enter wallet address or email" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="amount">Amount</label>
+                <input type="number" step="0.01" min="0.01" placeholder="0.00" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="currency">Currency</label>
+                <select style={{width: '100%', padding: '0.75rem', border: '1px solid rgba(255, 215, 0, 0.3)', borderRadius: '8px', background: 'rgba(0, 0, 0, 0.2)', color: '#ffffff'}}>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="BTC">BTC</option>
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary" style={{width: '100%'}}>
+                Send Money
+              </button>
+            </form>
+            <p className="text-center mt-2">
+              <a href="#" onClick={() => showSection('dashboard')} style={{color: '#FFD700'}}>← Back to Dashboard</a>
+            </p>
+          </section>
+        )}
+
+        {/* Receive Money */}
+        {currentSection === 'receive' && isAuthenticated && (
+          <section className="form-container active">
+            <h2 className="text-center mb-2">Receive Money</h2>
+            <div className="qr-container">
+              <p>Share your wallet address or QR code:</p>
+              <div className="qr-code">
+                <div style={{width: '200px', height: '200px', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333'}}>
+                  QR Code
+                </div>
+              </div>
+              <div style={{background: 'rgba(0, 0, 0, 0.2)', padding: '1rem', borderRadius: '8px', marginTop: '1rem'}}>
+                <p style={{fontSize: '0.9rem', wordBreak: 'break-all'}}>
+                  nomadpay:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+                </p>
+              </div>
+            </div>
+            <p className="text-center mt-2">
+              <a href="#" onClick={() => showSection('dashboard')} style={{color: '#FFD700'}}>← Back to Dashboard</a>
+            </p>
+          </section>
+        )}
+      </main>
+    </div>
   );
 };
 
