@@ -103,10 +103,12 @@ const App: React.FC = () => {
       console.log('Response data:', data);
 
       if (data.success) {
-        localStorage.setItem('nomadpay_token', data.data.access_token);
-        localStorage.setItem('nomadpay_user', JSON.stringify(data.data.user));
+        // Store tokens and user data with correct response structure
+        localStorage.setItem('nomadpay_token', data.access_token);
+        localStorage.setItem('nomadpay_refresh_token', data.refresh_token);
+        localStorage.setItem('nomadpay_user', JSON.stringify(data.user));
         setIsAuthenticated(true);
-        setUser(data.data.user);
+        setUser(data.user);
         setSuccessMessage('login', 'Welcome back! Successfully logged in.');
         setTimeout(() => {
           setCurrentSection('dashboard');
@@ -146,10 +148,12 @@ const App: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        localStorage.setItem('nomadpay_token', data.data.access_token);
-        localStorage.setItem('nomadpay_user', JSON.stringify(data.data.user));
+        // Store tokens and user data with correct response structure
+        localStorage.setItem('nomadpay_token', data.access_token);
+        localStorage.setItem('nomadpay_refresh_token', data.refresh_token);
+        localStorage.setItem('nomadpay_user', JSON.stringify(data.user));
         setIsAuthenticated(true);
-        setUser(data.data.user);
+        setUser(data.user);
         setSuccessMessage('register', 'Account created successfully! Welcome to NomadPay.');
         setTimeout(() => {
           setCurrentSection('dashboard');
@@ -167,6 +171,7 @@ const App: React.FC = () => {
 
   const logout = () => {
     localStorage.removeItem('nomadpay_token');
+    localStorage.removeItem('nomadpay_refresh_token');
     localStorage.removeItem('nomadpay_user');
     setIsAuthenticated(false);
     setUser(null);
