@@ -82,11 +82,15 @@ const App: React.FC = () => {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
+    console.log('Login attempt:', { email, apiBase: API_BASE });
     setLoadingState('login', true);
     clearMessages();
 
     try {
-      const response = await fetch(`${API_BASE}/api/auth/login`, {
+      const loginUrl = `${API_BASE}/api/auth/login`;
+      console.log('Making request to:', loginUrl);
+      
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +98,9 @@ const App: React.FC = () => {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('Response received:', response.status, response.statusText);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (data.success) {
         localStorage.setItem('nomadpay_token', data.data.access_token);
@@ -110,6 +116,7 @@ const App: React.FC = () => {
         setError('login', data.message || 'Login failed. Please try again.');
       }
     } catch (error) {
+      console.error('Login error details:', error);
       setError('login', 'Network error. Please check your connection.');
     } finally {
       setLoadingState('login', false);
