@@ -24,6 +24,7 @@ interface Balance {
   amount: number;
 }
 
+// Production API endpoint for NomadPay backend
 const API_BASE = 'https://nomadpay-api.onrender.com';
 
 const App: React.FC = () => {
